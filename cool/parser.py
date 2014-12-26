@@ -4,40 +4,38 @@ import logging
 import sys
 import os.path as osp
 
-
 keywords = {
-    'Class' : 'CLASS', 
-    'else' : 'ELSE', 
-    'false' : 'FALSE', 
-    'fi' : 'FI', 
-    'if' : 'IF', 
-    'in' : 'IN', 
-    'inherits' : 'INHERITS', 
-    'isvoid' : 'ISVOID', 
-    'let' : 'LET', 
-    'loop' : 'LOOP', 
-    'pool' : 'POOL', 
-    'then' : 'THEN', 
-    'while' : 'WHILE', 
-    'case' : 'CASE', 
-    'esac' : 'ESAC', 
-    'new' : 'NEW', 
-    'of' : 'OF', 
-    'not' : 'NOT', 
-    'true' : 'TRUE', 
+    'class' : 'CLASS',
+    'case' : 'CASE',
+    'else' : 'ELSE',
+    'esac' : 'ESAC',
+    'fi' : 'FI',
+    'if' : 'IF',
+    'in' : 'IN',
+    'inherits' : 'INHERITS',
+    'isvoid' : 'ISVOID',
+    'let' : 'LET',
+    'loop' : 'LOOP',
+    'new' : 'NEW',
+    'not' : 'NOT',
+    'of' : 'OF',
+    'pool' : 'POOL',
+    'then' : 'THEN',
+    'while' : 'WHILE',
 }
 
 tokens = [
-    'INTEGER',
-    'ID',
-    'TYPE',
-    'STRING',
+    'OBJECTID',
+    'TYPEID',
+    'INT_CONST',
+    'BOOL_CONST',
+    'STR_CONST',
     'NEWLINE',
     'COMMENT_SINGLELINE',
     'COMMENT_MULTILINE',
-    'ASSIGNMENT',
-    'LTEQ',
-    'GTEQ',
+    'ASSIGN',
+    'LE',
+    'DARROW',
     #'ERRORTOKEN' need to return error token in cool
 ] + list(keywords.values())
 
@@ -49,33 +47,33 @@ literals = [
     '=', '@', 
 ]
 
-t_ASSIGNMENT = r'<-'
-t_LTEQ = r'<='
-t_GTEQ = '>='
+t_ASSIGN = r'<-'
+t_LE = r'<='
+t_DARROW = '=>'
 
 t_ignore = ' \f\t\v\r' # whitespace
 
 
-def t_INTEGER(t):
+def t_INT_CONST(t):
     r'\d+'
     t.value = int(t.value)    
     return t
 
-def t_ID(t):
+def t_OBJECTID(t):
     r'[a-zA-Z][\w]*'
 
-    if t.value not in ['SELF_TYPE', 'Class'] and \
-       t.value[0].isupper():
-        t.type = 'TYPE'
+    #if t.value not in ['SELF_TYPE'] and t.value[0].isupper():
+    if t.value[0].isupper():
+        t.type = 'TYPEID'
     else:
         if t.value.casefold() in ['true', 'false']:
-            t.type = t.value.upper()
+            t.type = 'BOOL_CONST'
             t.value = t.value.lower()
         else:
-            t.type = keywords.get(t.value, 'ID')
+            t.type = keywords.get(t.value, 'OBJECTID')
     return t
 
-def t_STRING(t):
+def t_STR_CONST(t):
     r'\"([\\].|[^"\n])*\"'
     t.lexer.lineno += t.value.count('\n')
     return t
@@ -87,9 +85,6 @@ def t_COMMENT_MULTILINE(t):
     #r'[(][*](.|\n)*[*][)]'
     r'\(\*(.|\n)*?\*\)'
     t.lexer.lineno += t.value.count('\n')
-
-    #t.lexer.lineno += t.value.count('\n')
-    print('COMMENT_MULTILINE: ', t)
     
 def t_NEWLINE(t):
     r'\n+'
@@ -140,10 +135,24 @@ def tokenize(input_str):
         if not tok:
             break
         else:
-            result.append((tok.type, tok.value))
+            result.append((tok.type, tok.value, lexer.lineno))
     return result
-
+    
 if __name__ == '__main__':
-    print(tokenize(_get_string(sys.argv[1])))
+    tokens = tokenize(_get_string(sys.argv[1]))
+    #count = 1
+    #print(len(tokens))
+
+    #sys.exit(0)
+    for t in tokens:
+        if t[0] in keywords.values():
+            print('#{0} {1}'.format(t[2], t[0]))
+        elif t[0] in ['ASSIGN', 'LE', 'DARROW']:
+            print('#{0} {1}'.format(t[2], t[0]))
+        elif t[0] in literals:
+            print("#{0} '{1}'".format(t[2], t[0]))
+        else:
+            print('#{0} {1} {2}'.format(t[2], t[0], t[1]))
+
     #print(_get_string(sys.argv[1]))
     
