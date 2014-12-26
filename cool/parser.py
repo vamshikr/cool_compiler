@@ -52,7 +52,7 @@ t_LE = r'<='
 t_DARROW = '=>'
 
 t_ignore = ' \f\t\v\r' # whitespace
-
+t_ignore_COMMENT_SINGLELINE = r'[-][-].*'
 
 def t_INT_CONST(t):
     r'\d+'
@@ -78,11 +78,7 @@ def t_STR_CONST(t):
     t.lexer.lineno += t.value.count('\n')
     return t
 
-def t_COMMENT_SINGLELINE(t):
-    r'[-][-].*'
-
 def t_COMMENT_MULTILINE(t):
-    #r'[(][*](.|\n)*[*][)]'
     r'\(\*(.|\n)*?\*\)'
     t.lexer.lineno += t.value.count('\n')
     
@@ -137,6 +133,152 @@ def tokenize(input_str):
         else:
             result.append((tok.type, tok.value, lexer.lineno))
     return result
+
+
+def p_program(p):
+    '''program : class ';' program'''
+
+def p_program_single(p):
+    '''program : class ';' '''
+
+def p_class(p):
+    '''class : CLASS TYPE parent '{' features '}' '''
+    
+def p_parent(p):
+    '''parent : inherits TYPE'''
+
+def p_parent_empty(p):
+    '''parent : empty'''
+
+def p_features(p):
+    '''features : feature ';' features'''
+    
+def p_features_empty(p):
+    '''features : empty'''
+
+def p_feature_method(p):
+    '''feature : OBJECTID '(' formalargs ')' ':' TYPEID '{' expr '}' '''
+
+def p_feature_member(p):
+    '''feature : variabledeclaration '''
+
+def p_variabledeclaration(p):
+    ''' variabledeclaration : variable variableinit '''
+
+def p_variable(p):
+    ''' variable : OBJECTID ':' TYPEID '''
+    
+def p_variableinit(p):
+    '''variableinit : ASSIGN expr '''
+    
+def p_variableinit_empty(p):
+    '''variableinit : empty '''
+    
+def p_formalargs(p):
+    '''formalargs : formal ',' formalargs '''
+
+def p_formalargs_singal(p):
+    '''formalargs : formal '''
+
+def p_formalargs_empty(p):
+    '''formalargs : empty '''
+
+def p_formal(p):
+    '''formal : variable '''
+
+def p_expr_assignment(p):
+    '''expr : OBJECTID ASSIGN expr'''
+
+def p_expr_methodcall(p):
+    '''expr : expr typecast '.' OBJECTID '(' actualargs ')' '''
+
+def p_expr_functioncall(p):
+    '''expr : OBJECTID '(' actualargs ')' '''
+
+def p_typecast(p):
+    '''typecast : '@' TYPEID '''
+    
+def p_typecast_empty(p):
+    '''typecast : empty '''
+    p[0] = None
+
+def p_actualargs(p):
+    '''actualargs : expr ',' actualargs '''
+    
+def p_actualargs_single(p):
+    '''actualargs : expr '''
+    
+def p_actualargs_empty(p):
+    '''actualargs : empty '''
+
+def p_ifthenelse(p):
+    '''ifthenelse : IF expr THEN expr ELSE expr FI '''
+
+def p_whileloop(p):
+    '''whileloop : WHILE expr LOOP expr POOL '''
+
+def p_block(p):
+    '''block : blockstatements'''
+
+def p_blockstatements(p):
+    '''blockstatements : expr ';' blockstatements'''
+
+def p_blockstatements_single(p):
+    '''blockstatements : expr ';' '''
+
+def p_letexpr(p):
+    '''letexpr : LET variablelist IN expr'''
+
+def p_variablelist(p):
+    '''variablelist : variabledeclaration ',' variablelist'''
+
+def p_variablelist_single(p):
+    '''variablelist : variabledeclaration'''
+
+def p_case(p):
+    '''case : CASE expr OF casestatements ESAC'''
+
+def p_casestatements(p):
+    '''casestatements : variable DASSIGN expr ';' casestatements'''
+    
+def p_casestatements_single(p):
+    '''casestatements : variable DASSIGN expr ';' '''
+
+def p_expr_unaryop_new(p):
+    '''expr : NEW TYPEID'''
+
+def p_expr_unaryop_isvoid(p):
+    '''expr : ISVOID expr'''
+
+def p_expr_unaryop_not(p):
+    '''expr : NOT expr'''
+
+def p_expr_unaryop_complement(p):
+    '''expr : '~' expr'''
+
+def p_expr_inbraces(p):
+    '''expr : '(' expr ')'''
+
+def p_expr_objectorconst(p):
+    '''expr : OBJECTID
+            | INT_CONST
+            | STR_CONST
+            | BOOL_CONST
+    '''
+    
+    
+def p_expr_binaryop(p):
+    '''expr : expr '+' expr
+            | expr '-' expr
+            | expr '*' expr
+            | expr '/' expr
+            | expr '-' expr
+            | expr '<' expr
+            | expr LE expr
+            | expr '=' expr
+    '''
+
+
     
 if __name__ == '__main__':
     tokens = tokenize(_get_string(sys.argv[1]))
