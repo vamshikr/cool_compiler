@@ -202,7 +202,7 @@ def p_variableinitialization_empty(p):
     
 def p_expr_assignment(p):
     '''expr : OBJECTID ASSIGN expr'''
-    p[0] = Assignment(p[1], [2])
+    p[0] = Assignment(p[1], [3])
     
 def p_expr_method_invoke(p):
     '''expr : expr typecast '.' OBJECTID '(' actualargs ')' '''

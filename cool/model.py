@@ -48,20 +48,17 @@ class ClassDefinition(SourceElement):
 
     def __init__(self, typeid, parent_typeid, features):
         super(ClassDeclaration, self).__init__()
-        self._fields = ['typeid', 'parent_typeid', 'features']
+        self._fields = ['features']
 
         self.typeid = typeid
         self.parent_typeid = parent_typeid
         self.features = features
-        
 
 class MethodDefinition(SourceElement):
 
     def __init__(self, name, formal_args, return_type, body):
         super(MethodDefinition, self).__init__()
-        self._fields = ['name', 'formal_args',
-                        'return_type',
-                        'body']
+        self._fields = ['formal_args', 'body']
 
         self.name = name
         self.formal_args = formal_args
@@ -81,7 +78,7 @@ class VariableDeclaration(SourceElement):
 
     def __init__(self, name, typeid):
         super(VariableDeclaration, self).__init__()
-        self._fields = ['name', 'typeid']
+        self._fields = []
 
         self.name = name
         self.typeid = typeid
@@ -96,29 +93,27 @@ class Assignment(Expression):
     
     def __init__(self, objectid, expr):
         super(Assignment, self).__init__()
-        self._fields = ['objectid', 'expr']
+        self._fields = ['expr']
 
         self.objectid = objectid
         self.expr = expr
-
 
 class MethodInvoke(Expression):
     
     def __init__(self, expr, typeid, objectid, arguments):
         super(MethodInvoke, self).__init__()
-        self._fields = ['expr', 'typeid', 'objectid', 'arguments']
+        self._fields = ['expr', 'arguments']
 
         self.expr = expr #left hand side of invokation
         self.typeid = typeid #this is for typecasting
         self.objectid = objectid #the method name
         self.arguments = arguments
-
     
 class LocalMethodInvoke(Expression):
 
     def __init__(self, objectid, arguments):
         super(LocalMethodInvoke, self).__init__()
-        self._fields = ['objectid', 'arguments']
+        self._fields = ['arguments']
 
         self.objectid = objectid #the method name
         self.arguments = arguments
@@ -152,11 +147,11 @@ class BlockStatement(Expression):
 
 class LetExpression(Expression):
 
-    def __init__(self, varlist, expr):
+    def __init__(self, var_list, expr):
         super(LetExpression, self).__init__()
-        self._fields = ['varlist', 'expr']
+        self._fields = ['var_list', 'expr']
 
-        self.varlist = varlist
+        self.var_list = var_list
         self.expr = expr
 
 class CaseExpression(Expression):
