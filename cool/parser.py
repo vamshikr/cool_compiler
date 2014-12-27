@@ -133,18 +133,21 @@ def tokenize(input_str):
             result.append((tok.type, tok.value, lexer.lineno))
     return result
 
+#########################################################
 
 def p_program(p):
     '''program : class ';' program'''
-
+    p[0] = [p[1]] + p[3]
+    
 def p_program_single(p):
     '''program : class ';' '''
-
+    p[0] = [p[1]]
+    
 def p_class(p):
-    '''class : CLASS TYPE parent '{' features '}' '''
+    '''class : CLASS TYPEID parent '{' features '}' '''
     
 def p_parent(p):
-    '''parent : inherits TYPE'''
+    '''parent : inherits TYPEID'''
 
 def p_parent_empty(p):
     '''parent : empty'''
