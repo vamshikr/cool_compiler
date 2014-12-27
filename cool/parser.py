@@ -43,8 +43,7 @@ literals = [
     ';', ',', ':', '.',
     '(', ')', '{', '}',
     '+', '-', '*', '/',
-    '~', '<', '>',
-    '=', '@', 
+    '~', '<', '=', '@', 
 ]
 
 t_ASSIGN = r'<-'
@@ -260,12 +259,19 @@ def p_expr_inbraces(p):
     '''expr : '(' expr ')'''
 
 def p_expr_objectorconst(p):
-    '''expr : OBJECTID
-            | INT_CONST
+    '''expr : INT_CONST
             | STR_CONST
             | BOOL_CONST
+            | OBJECTID
     '''
-    
+    if isinstance(p[1], int):
+        p[0] = p[1]
+    elif p[1].startswith('\"') and p[1].endswith('\"'):
+        p[0] = p[1][1:-1]
+    elif p[1] in ['true', 'false']:
+        p[0] = True if p[1] == 'true' else False
+    else:
+        p[0] = ObjectId(p[1])
     
 def p_expr_binaryop(p):
     '''expr : expr '+' expr
@@ -277,7 +283,19 @@ def p_expr_binaryop(p):
             | expr LE expr
             | expr '=' expr
     '''
-
+    p[0] = BinOp(p[2], p[1], p[3])
+    
+precedence = (
+    ('right', 'ASSIGN'),
+    ('left', 'NOT' ),
+    ('nonassoc', '<', 'LE', '='),
+    ('left', '+', '-'),
+    ('left', '*', '/'),
+    ('left', 'ISVOID'),
+    ('left', '~'),
+    ('left', '@'),
+    ('left', '.'),
+)
 
     
 if __name__ == '__main__':
