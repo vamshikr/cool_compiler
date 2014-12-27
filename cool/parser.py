@@ -145,122 +145,155 @@ def p_program_single(p):
     
 def p_class(p):
     '''class : CLASS TYPEID parent '{' features '}' '''
+    p[0] = ClassDefinition(p[1], p[3], p[5])
     
 def p_parent(p):
     '''parent : inherits TYPEID'''
-
+    p[0] = p[2]
+    
 def p_parent_empty(p):
     '''parent : empty'''
+    p[0] = None
 
 def p_features(p):
     '''features : feature ';' features'''
-    
+    p[0] = [p[1]] + p[3]
+
 def p_features_empty(p):
     '''features : empty'''
+    p[0] = []
 
-def p_feature_method(p):
-    '''feature : OBJECTID '(' formalargs ')' ':' TYPEID '{' expr '}' '''
-
-def p_feature_member(p):
-    '''feature : variabledeclaration '''
-
-def p_variabledeclaration(p):
-    ''' variabledeclaration : variable variableinit '''
-
-def p_variable(p):
-    ''' variable : OBJECTID ':' TYPEID '''
+def p_feature(p):
+    '''feature : variabledefinition
+               | methoddefinition'''
+    p[0] = p[1]
     
-def p_variableinit(p):
-    '''variableinit : ASSIGN expr '''
-    
-def p_variableinit_empty(p):
-    '''variableinit : empty '''
-    
+def p_method_definition(p):
+    '''methoddefinition : OBJECTID '(' formalargs ')' ':' TYPEID '{' expr '}' '''
+    p[0] = MethodDefinition(p[1], p[3], p[6], p[8])
+
 def p_formalargs(p):
-    '''formalargs : formal ',' formalargs '''
-
+    '''formalargs : variabledeclaration ',' formalargs'''
+    p[0] = [p[1]] + p[3]
+    
 def p_formalargs_singal(p):
-    '''formalargs : formal '''
+    '''formalargs : variabledeclaration'''
+    p[0] = [p[1]]
 
 def p_formalargs_empty(p):
     '''formalargs : empty '''
-
-def p_formal(p):
-    '''formal : variable '''
-
+    p[0] = []
+    
+def p_variabledefinition(p):
+    '''variabledefinition : variabledeclaration variableinitialization'''
+    p[0] = VariableDefinition(p[1], p[2])
+    
+def p_variabledeclaration(p):
+    ''' variabledeclaration : OBJECTID ':' TYPEID '''
+    p[0] = VariableDeclaration(p[1], p[3])
+    
+def p_variableinitialization(p):
+    '''variableinitialization : ASSIGN expr '''
+    p[0] = p[2]
+    
+def p_variableinitialization_empty(p):
+    '''variableinitialization : empty '''
+    p[0] = None
+    
 def p_expr_assignment(p):
     '''expr : OBJECTID ASSIGN expr'''
-
-def p_expr_methodcall(p):
+    p[0] = Assignment(p[1], [2])
+    
+def p_expr_method_invoke(p):
     '''expr : expr typecast '.' OBJECTID '(' actualargs ')' '''
-
-def p_expr_functioncall(p):
-    '''expr : OBJECTID '(' actualargs ')' '''
-
+    p[0] = MethodInvoke(p[1], p[2], p[4], p[6])
+    
 def p_typecast(p):
     '''typecast : '@' TYPEID '''
+    p[0] = p[2]
     
 def p_typecast_empty(p):
     '''typecast : empty '''
     p[0] = None
 
+def p_expr_local_method_invoke(p):
+    '''expr : OBJECTID '(' actualargs ')' '''
+    p[0] = LocalMethodInvoke(p[1], p[3])
+    
 def p_actualargs(p):
     '''actualargs : expr ',' actualargs '''
-    
+    p[0] = [p[1]] + p[3]
+
 def p_actualargs_single(p):
     '''actualargs : expr '''
-    
+    p[0] = [p[1]]
+
 def p_actualargs_empty(p):
     '''actualargs : empty '''
+    p[0] = []
 
 def p_ifthenelse(p):
     '''ifthenelse : IF expr THEN expr ELSE expr FI '''
-
+    p[0] = IfThenElse(p[2], p[4], p[6])
+    
 def p_whileloop(p):
     '''whileloop : WHILE expr LOOP expr POOL '''
-
+    p[0] = WhileLoop(p[2], p[4])
+    
 def p_block(p):
-    '''block : blockstatements'''
-
+    '''block : '{' blockstatements '}' '''
+    p[0] = BlockStatement(p[2])
+    
 def p_blockstatements(p):
     '''blockstatements : expr ';' blockstatements'''
-
+    p[0] = [p[1]] + p[3]
+    
 def p_blockstatements_single(p):
     '''blockstatements : expr ';' '''
+    p[0] = [p[1]]
 
 def p_letexpr(p):
     '''letexpr : LET variablelist IN expr'''
-
+    p[0] = LetExpression(p[2], p[4])
+    
 def p_variablelist(p):
-    '''variablelist : variabledeclaration ',' variablelist'''
-
+    '''variablelist : variabledefinition ',' variablelist'''
+    p[0] = [p[1]] + p[3]
+    
 def p_variablelist_single(p):
-    '''variablelist : variabledeclaration'''
+    '''variablelist : variabledefinition'''
+    p[0] = [p[1]]
 
 def p_case(p):
     '''case : CASE expr OF casestatements ESAC'''
-
+    p[0] = CaseExpression(p[2], p[4])
+    
 def p_casestatements(p):
-    '''casestatements : variable DASSIGN expr ';' casestatements'''
+    '''casestatements : variabledeclaration DASSIGN expr ';' casestatements'''
+    p[0] = [CaseStatement(p[1], p[3])] + p[5]
     
 def p_casestatements_single(p):
-    '''casestatements : variable DASSIGN expr ';' '''
+    '''casestatements : variabledeclaration DASSIGN expr ';' '''
+    p[0] = [CaseStatement(p[1], p[3])]
 
 def p_expr_unaryop_new(p):
-    '''expr : NEW TYPEID'''
-
-def p_expr_unaryop_isvoid(p):
-    '''expr : ISVOID expr'''
-
-def p_expr_unaryop_not(p):
-    '''expr : NOT expr'''
-
-def p_expr_unaryop_complement(p):
-    '''expr : '~' expr'''
-
-def p_expr_inbraces(p):
-    '''expr : '(' expr ')'''
-
+    '''expr : NEW TYPEID
+            | ISVOID expr
+            | NOT expr
+            | '~' expr
+            | '(' expr ')
+    '''
+    if p[1] == 'new':
+        p[0] = NewStatement(p[2])
+    elif p[1] == 'isvoid':
+        p[0] = IsVoidExpression(p[2])
+    elif p[1] == 'not':
+        p[0] = Complement(true, p[2])
+    elif p[1] == '~':
+        p[0] = Complement(false, p[2])
+    else:
+        p[0] = InBracketsExpression(p[2])
+    
 def p_expr_objectorconst(p):
     '''expr : INT_CONST
             | STR_CONST
@@ -286,7 +319,7 @@ def p_expr_binaryop(p):
             | expr LE expr
             | expr '=' expr
     '''
-    p[0] = BinOp(p[2], p[1], p[3])
+    p[0] = BinaryOperationExpression(p[2], p[1], p[3])
     
 precedence = (
     ('right', 'ASSIGN'),
