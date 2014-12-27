@@ -4,6 +4,8 @@ import logging
 import sys
 import os.path as osp
 
+from model import *
+
 keywords = {
     'class' : 'CLASS',
     'case' : 'CASE',
@@ -145,10 +147,10 @@ def p_program_single(p):
     
 def p_class(p):
     '''class : CLASS TYPEID parent '{' features '}' '''
-    p[0] = ClassDefinition(p[1], p[3], p[5])
+    p[0] = ClassDefinition(p[2], p[3], p[5])
     
 def p_parent(p):
-    '''parent : inherits TYPEID'''
+    '''parent : INHERITS TYPEID'''
     p[0] = p[2]
     
 def p_parent_empty(p):
@@ -200,14 +202,6 @@ def p_variableinitialization_empty(p):
     '''variableinitialization : empty '''
     p[0] = None
     
-def p_expr_assignment(p):
-    '''expr : OBJECTID ASSIGN expr'''
-    p[0] = Assignment(p[1], [3])
-    
-def p_expr_method_invoke(p):
-    '''expr : expr typecast '.' OBJECTID '(' actualargs ')' '''
-    p[0] = MethodInvoke(p[1], p[2], p[4], p[6])
-    
 def p_typecast(p):
     '''typecast : '@' TYPEID '''
     p[0] = p[2]
@@ -216,10 +210,6 @@ def p_typecast_empty(p):
     '''typecast : empty '''
     p[0] = None
 
-def p_expr_local_method_invoke(p):
-    '''expr : OBJECTID '(' actualargs ')' '''
-    p[0] = LocalMethodInvoke(p[1], p[3])
-    
 def p_actualargs(p):
     '''actualargs : expr ',' actualargs '''
     p[0] = [p[1]] + p[3]
@@ -241,7 +231,7 @@ def p_whileloop(p):
     p[0] = WhileLoop(p[2], p[4])
     
 def p_block(p):
-    '''block : '{' blockstatements '}' '''
+    '''blockexpr : '{' blockstatements '}' '''
     p[0] = BlockStatement(p[2])
     
 def p_blockstatements(p):
@@ -265,36 +255,42 @@ def p_variablelist_single(p):
     p[0] = [p[1]]
 
 def p_case(p):
-    '''case : CASE expr OF casestatements ESAC'''
+    '''caseexpr : CASE expr OF casestatements ESAC'''
     p[0] = CaseExpression(p[2], p[4])
     
 def p_casestatements(p):
-    '''casestatements : variabledeclaration DASSIGN expr ';' casestatements'''
+    '''casestatements : variabledeclaration DARROW expr ';' casestatements'''
     p[0] = [CaseStatement(p[1], p[3])] + p[5]
     
 def p_casestatements_single(p):
-    '''casestatements : variabledeclaration DASSIGN expr ';' '''
+    '''casestatements : variabledeclaration DARROW expr ';' '''
     p[0] = [CaseStatement(p[1], p[3])]
 
-def p_expr_unaryop_new(p):
-    '''expr : NEW TYPEID
-            | ISVOID expr
-            | NOT expr
-            | '~' expr
-            | '(' expr ')
+def p_expr(p):
+    '''expr : assignment
+            | methodinvoke
+            | localmethodinvoke
+            | ifthenelse
+            | whileloop
+            | caseexpr
+            | blockexpr
+            | letexpr
     '''
-    if p[1] == 'new':
-        p[0] = NewStatement(p[2])
-    elif p[1] == 'isvoid':
-        p[0] = IsVoidExpression(p[2])
-    elif p[1] == 'not':
-        p[0] = Complement(true, p[2])
-    elif p[1] == '~':
-        p[0] = Complement(false, p[2])
-    else:
-        p[0] = InBracketsExpression(p[2])
+    p[0] = p[1]
+
+def p_assignment(p):
+    '''assignment : OBJECTID ASSIGN expr'''
+    p[0] = Assignment(p[1], [3])
     
-def p_expr_objectorconst(p):
+def p_method_invoke(p):
+    '''methodinvoke : expr typecast '.' OBJECTID '(' actualargs ')' '''
+    p[0] = MethodInvoke(p[1], p[2], p[4], p[6])
+    
+def p_local_method_invoke(p):
+    '''localmethodinvoke : OBJECTID '(' actualargs ')' '''
+    p[0] = LocalMethodInvoke(p[1], p[3])
+
+def p_expr_object_or_const(p):
     '''expr : INT_CONST
             | STR_CONST
             | BOOL_CONST
@@ -307,20 +303,44 @@ def p_expr_objectorconst(p):
     elif p[1] in ['true', 'false']:
         p[0] = True if p[1] == 'true' else False
     else:
-        p[0] = ObjectId(p[1])
-    
+        p[0] = ObjectIdExpression(p[1])
+
+def p_expr_unaryop_new(p):
+    '''expr : NEW TYPEID
+            | ISVOID expr
+            | NOT expr
+            | '~' expr
+            | '(' expr ')'
+    '''
+    if p[1] == 'new':
+        p[0] = NewStatement(p[2])
+    elif p[1] == 'isvoid':
+        p[0] = IsVoidExpression(p[2])
+    elif p[1] == 'not':
+        p[0] = Complement(true, p[2])
+    elif p[1] == '~':
+        p[0] = Complement(false, p[2])
+    else:
+        p[0] = InBracketsExpression(p[2])
+        
 def p_expr_binaryop(p):
     '''expr : expr '+' expr
             | expr '-' expr
             | expr '*' expr
             | expr '/' expr
-            | expr '-' expr
             | expr '<' expr
             | expr LE expr
             | expr '=' expr
     '''
     p[0] = BinaryOperationExpression(p[2], p[1], p[3])
+
+def p_empty(p):
+    '''empty : '''
+    pass
     
+def p_error(p):
+    print("Syntax error at '{0}'", p)
+
 precedence = (
     ('right', 'ASSIGN'),
     ('left', 'NOT' ),
@@ -333,8 +353,24 @@ precedence = (
     ('left', '.'),
 )
 
+parser = yacc.yacc(debug=True,
+                   tabmodule='cool_parsetab',
+                   start='program',
+                   debugfile='cool_parser.out')
+
+def parse_str(input_str):
+    '''Returns AST'''
+    return parser.parse(input_str, lexer=lexer)
+
+def parse_file(filename):
+    input_str = _get_string(filename)
+    return parse_str(input_str)
     
 if __name__ == '__main__':
+    print(parse_file(sys.argv[1]))
+    
+    
+if __name__ == '__mai__':
     tokens = tokenize(_get_string(sys.argv[1]))
     #count = 1
     #print(len(tokens))

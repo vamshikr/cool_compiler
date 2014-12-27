@@ -47,7 +47,7 @@ class SourceElement(object):
 class ClassDefinition(SourceElement):
 
     def __init__(self, typeid, parent_typeid, features):
-        super(ClassDeclaration, self).__init__()
+        super(ClassDefinition, self).__init__()
         self._fields = ['features']
 
         self.typeid = typeid
@@ -85,7 +85,7 @@ class VariableDeclaration(SourceElement):
         
 class Expression(SourceElement):
     
-    def __init__(self, name, typeid):
+    def __init__(self):
         super(Expression, self).__init__()
         self._fields = []
 
@@ -199,7 +199,7 @@ class ComplementExpression(Expression):
 
 class InBracketsExpression(Expression):
         
-    def __init__(self, isbool, expr):
+    def __init__(self, expr):
         super(InBracketsExpression, self).__init__()
         
         self._fields = ['expr']
