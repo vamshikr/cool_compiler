@@ -46,12 +46,12 @@ class SourceElement(object):
 
 class ClassDefinition(SourceElement):
 
-    def __init__(self, typeid, parent_typeid, features):
+    def __init__(self, typeid, baseclass, features):
         super(ClassDefinition, self).__init__()
         self._fields = ['features']
 
         self.typeid = typeid
-        self.parent_typeid = parent_typeid
+        self.baseclass = baseclass  #this is a typeid
         self.features = features
 
 class MethodDefinition(SourceElement):
@@ -212,7 +212,7 @@ class BinaryOperationExpression(Expression):
         
         self._fields = ['expr1', 'expr2']
         self.binop = binop
-        self.expr1 = expr2
+        self.expr1 = expr1
         self.expr2 = expr2
         
 class ObjectIdExpression(Expression):

@@ -38,11 +38,12 @@ tokens = [
     'ASSIGN',
     'LE',
     'DARROW',
+    'DOT',
     #'ERRORTOKEN' need to return error token in cool
 ] + list(keywords.values())
 
 literals = [
-    ';', ',', ':', '.',
+    ';', ',', ':',
     '(', ')', '{', '}',
     '+', '-', '*', '/',
     '~', '<', '=', '@', 
@@ -51,6 +52,7 @@ literals = [
 t_ASSIGN = r'<-'
 t_LE = r'<='
 t_DARROW = '=>'
+t_DOT=r'\.'
 
 t_ignore = ' \f\t\v\r' # whitespace
 t_ignore_COMMENT_SINGLELINE = r'[-][-].*'
@@ -86,8 +88,6 @@ def t_COMMENT_MULTILINE(t):
 def t_NEWLINE(t):
     r'\n+'
     t.lexer.lineno += len(t.value)
-    #t.value = '\n'
-    #return t
 
 def find_column(t):
     last_cr = t.lexer.lexdata.rfind('\n', 0, t.lexpos)
@@ -137,6 +137,19 @@ def tokenize(input_str):
 
 #########################################################
 
+precedence = (
+    ('right', 'IN'),
+    ('right', 'ASSIGN'),
+    ('left', 'NOT' ),
+    ('nonassoc', '<', 'LE', '='),
+    ('left', '+', '-'),
+    ('left', '*', '/'),
+    ('left', 'ISVOID'),
+    ('left', '~'),
+    ('left', '@'),
+    ('left', 'DOT'),
+)
+
 def p_program(p):
     '''program : class ';' program'''
     p[0] = [p[1]] + p[3]
@@ -146,15 +159,15 @@ def p_program_single(p):
     p[0] = [p[1]]
     
 def p_class(p):
-    '''class : CLASS TYPEID parent '{' features '}' '''
+    '''class : CLASS TYPEID baseclass '{' features '}' '''
     p[0] = ClassDefinition(p[2], p[3], p[5])
     
-def p_parent(p):
-    '''parent : INHERITS TYPEID'''
+def p_baseclass(p):
+    '''baseclass : INHERITS TYPEID'''
     p[0] = p[2]
     
-def p_parent_empty(p):
-    '''parent : empty'''
+def p_baseclass_empty(p):
+    '''baseclass : empty'''
     p[0] = None
 
 def p_features(p):
@@ -174,18 +187,6 @@ def p_method_definition(p):
     '''methoddefinition : OBJECTID '(' formalargs ')' ':' TYPEID '{' expr '}' '''
     p[0] = MethodDefinition(p[1], p[3], p[6], p[8])
 
-def p_formalargs(p):
-    '''formalargs : variabledeclaration ',' formalargs'''
-    p[0] = [p[1]] + p[3]
-    
-def p_formalargs_singal(p):
-    '''formalargs : variabledeclaration'''
-    p[0] = [p[1]]
-
-def p_formalargs_empty(p):
-    '''formalargs : empty '''
-    p[0] = []
-    
 def p_variabledefinition(p):
     '''variabledefinition : variabledeclaration variableinitialization'''
     p[0] = VariableDefinition(p[1], p[2])
@@ -202,14 +203,18 @@ def p_variableinitialization_empty(p):
     '''variableinitialization : empty '''
     p[0] = None
     
-def p_typecast(p):
-    '''typecast : '@' TYPEID '''
-    p[0] = p[2]
+def p_formalargs(p):
+    '''formalargs : variabledeclaration ',' formalargs'''
+    p[0] = [p[1]] + p[3]
     
-def p_typecast_empty(p):
-    '''typecast : empty '''
-    p[0] = None
+def p_formalargs_singal(p):
+    '''formalargs : variabledeclaration'''
+    p[0] = [p[1]]
 
+def p_formalargs_empty(p):
+    '''formalargs : empty '''
+    p[0] = []
+    
 def p_actualargs(p):
     '''actualargs : expr ',' actualargs '''
     p[0] = [p[1]] + p[3]
@@ -221,6 +226,38 @@ def p_actualargs_single(p):
 def p_actualargs_empty(p):
     '''actualargs : empty '''
     p[0] = []
+
+def p_expr(p):
+    '''expr : assignment
+            | methodinvoke
+            | localmethodinvoke
+            | ifthenelse
+            | whileloop
+            | blockexpr
+            | letexpr
+            | caseexpr
+    '''
+    p[0] = p[1]
+
+def p_assignment(p):
+    '''assignment : OBJECTID ASSIGN expr'''
+    p[0] = Assignment(p[1], p[3])
+    
+def p_letexpr(p):
+    '''letexpr : LET variablelist IN expr'''
+    p[0] = LetExpression(p[2], p[4])
+    
+def p_method_invoke(p):
+    '''methodinvoke : expr DOT OBJECTID '(' actualargs ')' '''
+    p[0] = MethodInvoke(p[1], None, p[3], p[5])
+    
+def p_method_invoke_with_typecast(p):
+    '''methodinvoke : expr '@' TYPEID DOT OBJECTID '(' actualargs ')' '''
+    p[0] = MethodInvoke(p[1], p[2], p[4], p[6])
+    
+def p_local_method_invoke(p):
+    '''localmethodinvoke : OBJECTID '(' actualargs ')' '''
+    p[0] = LocalMethodInvoke(p[1], p[3])
 
 def p_ifthenelse(p):
     '''ifthenelse : IF expr THEN expr ELSE expr FI '''
@@ -242,10 +279,6 @@ def p_blockstatements_single(p):
     '''blockstatements : expr ';' '''
     p[0] = [p[1]]
 
-def p_letexpr(p):
-    '''letexpr : LET variablelist IN expr'''
-    p[0] = LetExpression(p[2], p[4])
-    
 def p_variablelist(p):
     '''variablelist : variabledefinition ',' variablelist'''
     p[0] = [p[1]] + p[3]
@@ -265,45 +298,6 @@ def p_casestatements(p):
 def p_casestatements_single(p):
     '''casestatements : variabledeclaration DARROW expr ';' '''
     p[0] = [CaseStatement(p[1], p[3])]
-
-def p_expr(p):
-    '''expr : assignment
-            | methodinvoke
-            | localmethodinvoke
-            | ifthenelse
-            | whileloop
-            | caseexpr
-            | blockexpr
-            | letexpr
-    '''
-    p[0] = p[1]
-
-def p_assignment(p):
-    '''assignment : OBJECTID ASSIGN expr'''
-    p[0] = Assignment(p[1], [3])
-    
-def p_method_invoke(p):
-    '''methodinvoke : expr typecast '.' OBJECTID '(' actualargs ')' '''
-    p[0] = MethodInvoke(p[1], p[2], p[4], p[6])
-    
-def p_local_method_invoke(p):
-    '''localmethodinvoke : OBJECTID '(' actualargs ')' '''
-    p[0] = LocalMethodInvoke(p[1], p[3])
-
-def p_expr_object_or_const(p):
-    '''expr : INT_CONST
-            | STR_CONST
-            | BOOL_CONST
-            | OBJECTID
-    '''
-    if isinstance(p[1], int):
-        p[0] = p[1]
-    elif p[1].startswith('\"') and p[1].endswith('\"'):
-        p[0] = p[1][1:-1]
-    elif p[1] in ['true', 'false']:
-        p[0] = True if p[1] == 'true' else False
-    else:
-        p[0] = ObjectIdExpression(p[1])
 
 def p_expr_unaryop_new(p):
     '''expr : NEW TYPEID
@@ -334,24 +328,27 @@ def p_expr_binaryop(p):
     '''
     p[0] = BinaryOperationExpression(p[2], p[1], p[3])
 
+def p_expr_object_or_const(p):
+    '''expr : INT_CONST
+            | STR_CONST
+            | BOOL_CONST
+            | OBJECTID
+    '''
+    if isinstance(p[1], int):
+        p[0] = p[1]
+    elif p[1].startswith('\"') and p[1].endswith('\"'):
+        p[0] = p[1][1:-1]
+    elif p[1] in ['true', 'false']:
+        p[0] = True if p[1] == 'true' else False
+    else:
+        p[0] = ObjectIdExpression(p[1])
+
 def p_empty(p):
     '''empty : '''
     pass
     
 def p_error(p):
     print("Syntax error at '{0}'", p)
-
-precedence = (
-    ('right', 'ASSIGN'),
-    ('left', 'NOT' ),
-    ('nonassoc', '<', 'LE', '='),
-    ('left', '+', '-'),
-    ('left', '*', '/'),
-    ('left', 'ISVOID'),
-    ('left', '~'),
-    ('left', '@'),
-    ('left', '.'),
-)
 
 parser = yacc.yacc(debug=True,
                    tabmodule='cool_parsetab',
