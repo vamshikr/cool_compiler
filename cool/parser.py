@@ -239,6 +239,50 @@ def p_expr(p):
     '''
     p[0] = p[1]
 
+def p_expr_unaryop_new(p):
+    '''expr : NEW TYPEID
+            | ISVOID expr
+            | NOT expr
+            | '~' expr
+            | '(' expr ')'
+    '''
+    if p[1] == 'new':
+        p[0] = NewStatement(p[2])
+    elif p[1] == 'isvoid':
+        p[0] = IsVoidExpression(p[2])
+    elif p[1] == 'not':
+        p[0] = ComplementExpression(True, p[2])
+    elif p[1] == '~':
+        p[0] = ComplementExpression(False, p[2])
+    else:
+        p[0] = InBracketsExpression(p[2])
+        
+def p_expr_binaryop(p):
+    '''expr : expr '+' expr
+            | expr '-' expr
+            | expr '*' expr
+            | expr '/' expr
+            | expr '<' expr
+            | expr LE expr
+            | expr '=' expr
+    '''
+    p[0] = BinaryOperationExpression(p[2], p[1], p[3])
+
+def p_expr_object_or_const(p):
+    '''expr : INT_CONST
+            | STR_CONST
+            | BOOL_CONST
+            | OBJECTID
+    '''
+    if isinstance(p[1], int):
+        p[0] = NumberExpression(p[1])
+    elif p[1].startswith('\"') and p[1].endswith('\"'):
+        p[0] = StringExpression(p[1][1:-1])
+    elif p[1] in ['true', 'false']:
+        p[0] = BooleanExpression(True if p[1] == 'true' else False)
+    else:
+        p[0] = ObjectIdExpression(p[1])
+
 def p_assignment(p):
     '''assignment : OBJECTID ASSIGN expr'''
     p[0] = Assignment(p[1], p[3])
@@ -257,7 +301,7 @@ def p_method_invoke_with_typecast(p):
     
 def p_local_method_invoke(p):
     '''localmethodinvoke : OBJECTID '(' actualargs ')' '''
-    p[0] = LocalMethodInvoke(p[1], p[3])
+    p[0] = MethodInvoke(None, None, p[1], p[3])
 
 def p_ifthenelse(p):
     '''ifthenelse : IF expr THEN expr ELSE expr FI '''
@@ -298,50 +342,6 @@ def p_casestatements(p):
 def p_casestatements_single(p):
     '''casestatements : variabledeclaration DARROW expr ';' '''
     p[0] = [CaseStatement(p[1], p[3])]
-
-def p_expr_unaryop_new(p):
-    '''expr : NEW TYPEID
-            | ISVOID expr
-            | NOT expr
-            | '~' expr
-            | '(' expr ')'
-    '''
-    if p[1] == 'new':
-        p[0] = NewStatement(p[2])
-    elif p[1] == 'isvoid':
-        p[0] = IsVoidExpression(p[2])
-    elif p[1] == 'not':
-        p[0] = Complement(true, p[2])
-    elif p[1] == '~':
-        p[0] = Complement(false, p[2])
-    else:
-        p[0] = InBracketsExpression(p[2])
-        
-def p_expr_binaryop(p):
-    '''expr : expr '+' expr
-            | expr '-' expr
-            | expr '*' expr
-            | expr '/' expr
-            | expr '<' expr
-            | expr LE expr
-            | expr '=' expr
-    '''
-    p[0] = BinaryOperationExpression(p[2], p[1], p[3])
-
-def p_expr_object_or_const(p):
-    '''expr : INT_CONST
-            | STR_CONST
-            | BOOL_CONST
-            | OBJECTID
-    '''
-    if isinstance(p[1], int):
-        p[0] = p[1]
-    elif p[1].startswith('\"') and p[1].endswith('\"'):
-        p[0] = p[1][1:-1]
-    elif p[1] in ['true', 'false']:
-        p[0] = True if p[1] == 'true' else False
-    else:
-        p[0] = ObjectIdExpression(p[1])
 
 def p_empty(p):
     '''empty : '''

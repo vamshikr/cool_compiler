@@ -46,12 +46,12 @@ class SourceElement(object):
 
 class ClassDefinition(SourceElement):
 
-    def __init__(self, typeid, baseclass, features):
+    def __init__(self, name, base_class, features):
         super(ClassDefinition, self).__init__()
         self._fields = ['features']
 
-        self.typeid = typeid
-        self.baseclass = baseclass  #this is a typeid
+        self.name = name
+        self.base_class = base_class  #this is a typeid
         self.features = features
 
 class MethodDefinition(SourceElement):
@@ -76,12 +76,12 @@ class VariableDefinition(SourceElement):
 
 class VariableDeclaration(SourceElement):
 
-    def __init__(self, name, typeid):
+    def __init__(self, name, class_name):
         super(VariableDeclaration, self).__init__()
         self._fields = []
 
         self.name = name
-        self.typeid = typeid
+        self.class_name = class_name
         
 class Expression(SourceElement):
     
@@ -91,42 +91,33 @@ class Expression(SourceElement):
 
 class Assignment(Expression):
     
-    def __init__(self, objectid, expr):
+    def __init__(self, lhs, expr):
         super(Assignment, self).__init__()
         self._fields = ['expr']
 
-        self.objectid = objectid
+        self.lhs = lhs
         self.expr = expr
 
 class MethodInvoke(Expression):
     
-    def __init__(self, expr, typeid, objectid, arguments):
+    def __init__(self, expr, at_type, name, arguments):
         super(MethodInvoke, self).__init__()
         self._fields = ['expr', 'arguments']
 
         self.expr = expr #left hand side of invokation
-        self.typeid = typeid #this is for typecasting
-        self.objectid = objectid #the method name
-        self.arguments = arguments
-    
-class LocalMethodInvoke(Expression):
-
-    def __init__(self, objectid, arguments):
-        super(LocalMethodInvoke, self).__init__()
-        self._fields = ['arguments']
-
-        self.objectid = objectid #the method name
+        self.at_type = at_type #this is for typecasting
+        self.name = name #the method name
         self.arguments = arguments
 
 class IfThenElse(Expression):
 
-    def __init__(self, condition, ifstat, elsestat):
+    def __init__(self, condition, ifbody, elsebody):
         super(IfThenElse, self).__init__()
-        self._fields = ['condition', 'ifstat', 'elsestat']
+        self._fields = ['condition', 'ifbody', 'elsebody']
 
         self.condition = condition
-        self.ifstat = ifstat
-        self.elsestat = elsestat
+        self.ifbody = ifbody
+        self.elsebody = elsebody
 
 class WhileLoop(Expression):
 
@@ -138,6 +129,7 @@ class WhileLoop(Expression):
         self.loopbody = loopbody
 
 class BlockStatement(Expression):
+    ''' of the form {[expr;]+}'''
 
     def __init__(self, statements):
         super(BlockStatement, self).__init__()
@@ -174,54 +166,79 @@ class CaseStatement(Expression):
 
 class NewStatement(Expression):
     
-    def __init__(self, typeid):
+    def __init__(self, class_name):
         super(NewStatement, self).__init__()
-        
         self._fields = []
-        self.typeid = typeid
+        
+        self.class_name = class_name
         
 class IsVoidExpression(Expression):
     
     def __init__(self, expr):
         super(IsVoidExpression, self).__init__()
-        
         self._fields = ['expr']
+        
         self.expr = expr
         
 class ComplementExpression(Expression):
     
     def __init__(self, isbool, expr):
         super(ComplementExpression, self).__init__()
-        
         self._fields = ['expr']
+        
         self.isbool = isbool #int or bool only, true if bool
         self.expr = expr
 
 class InBracketsExpression(Expression):
-        
+    ''' of the form (expr)'''
+
     def __init__(self, expr):
         super(InBracketsExpression, self).__init__()
-        
         self._fields = ['expr']
+        
         self.expr = expr
         
 class BinaryOperationExpression(Expression):
     
     def __init__(self, binop, expr1, expr2):
         super(BinaryOperationExpression, self).__init__()
-        
         self._fields = ['expr1', 'expr2']
+        
         self.binop = binop
         self.expr1 = expr1
         self.expr2 = expr2
         
 class ObjectIdExpression(Expression):
     
-    def __init__(self, objectid):
+    def __init__(self, name):
         super(ObjectIdExpression, self).__init__()
-        
         self._fields = []
-        self.objectid = objectid
+        
+        self.name = name
+        
+class NumberExpression(Expression):
+    
+    def __init__(self, value):
+        super(NumberExpression, self).__init__()
+        self._fields = []
+        
+        self.value = value
+        
+class BooleanExpression(Expression):
+    
+    def __init__(self, value):
+        super(BooleanExpression, self).__init__()
+        self._fields = []
+
+        self.value = value
+        
+class StringExpression(Expression):
+    
+    def __init__(self, value):
+        super(StringExpression, self).__init__()
+        self._fields = []
+        
+        self.value = value
         
     
             
