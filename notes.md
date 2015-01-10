@@ -3,3 +3,8 @@ Fri Dec 26 07:06:09 CST 2014
 
 The documentation says *comments in the cool code can be nested*. In the current implemenation nested comments are not handled. Need to have multiple lexical analyzer *states* to handle this.
 
+###Symantic Analysis
+
+Last 'front end' phase.
+Reject incorrect strings
+

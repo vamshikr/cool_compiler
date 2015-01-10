@@ -5,7 +5,6 @@ import cool
 
 class TestMain:
 
-
     def test_cool_parser(self):
         filename = './test/resources/examples/book_list.cl'
         print(os.getcwd())
@@ -16,3 +15,14 @@ class TestMain:
             assert ast != None
         else:
             assert osp.isfile(filename)
+
+class TestSymanticAnalyzer:
+
+    #Multiple class file definition
+    #Multiple method definitions
+    #
+    #Incorrect inheritance
+
+    
+    pass
+    

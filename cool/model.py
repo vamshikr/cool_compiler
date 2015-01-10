@@ -48,11 +48,18 @@ class ClassDefinition(SourceElement):
 
     def __init__(self, name, base_class, features):
         super(ClassDefinition, self).__init__()
-        self._fields = ['features']
+        self._fields = ['variables', 'methods']
 
         self.name = name
         self.base_class = base_class  #this is a typeid
-        self.features = features
+        self.variables = []
+        self.methods = []
+        
+        for feature in features:
+            if isinstance(feature, MethodDefinition):
+                self.methods.append(feature)
+            else:
+                self.variables.append(feature)
 
 class MethodDefinition(SourceElement):
 

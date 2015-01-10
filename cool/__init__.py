@@ -65,3 +65,15 @@ class Compiler():
         input_str = self._get_string(filename)
         return self.parse_str(input_str)
     
+    def parse_fileset(self, fileset):
+        ast_list = []
+
+        for filename in fileset:
+            if osp.isfile(filename) and osp.splitext(filename)[1] == '.cl':
+                ast = self.parse_file(filename)
+                if ast is not None:
+                    ast_list.extend(ast)
+
+        return ast_list
+
+        
