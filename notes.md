@@ -8,3 +8,5 @@ The documentation says *comments in the cool code can be nested*. In the current
 Last 'front end' phase.
 Reject incorrect strings
 
+In a class definition have mutiple member variables, can a variable be used to initialize another variable. For now assuming that this is not allowed
+

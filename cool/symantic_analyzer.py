@@ -119,11 +119,126 @@ class SymanticAnalyzer:
         print('leaving variable decl : ', var_decl)
 
     def visit_MethodDefinition(self, method_def):
+        print('visiting method def :', method_def.name)
+        self._new_scope()
         return True
 
     def leave_MethodDefinition(self, method_def):
+        self._pop_scope()
+
+    def visit_Expression(self, arg):
+        return True
+
+    def leave_Expression(self, arg):
         pass
-        
+
+    def visit_Assignment(self, arg):
+        return True
+
+    def leave_Assignment(self, arg):
+        pass
+
+    def visit_MethodInvoke(self, arg):
+        return True
+
+    def leave_MethodInvoke(self, arg):
+        pass
+
+    def visit_IfThenElse(self, arg):
+        return True
+
+    def leave_IfThenElse(self, arg):
+        pass
+
+    def visit_WhileLoop(self, arg):
+        return True
+        pass
+
+    def leave_WhileLoop(self, arg):
+        pass
+
+    def visit_BlockStatement(self, arg):
+        return True
+
+    def leave_BlockStatement(self, arg):
+        pass
+
+    def visit_LetExpression(self, lef_exp):
+        print('visiting let expression :')
+        self._new_scope()
+        return True
+
+    def leave_LetExpression(self, arg):
+        self._pop_scope()
+
+    def visit_CaseExpression(self, arg):
+        return True
+
+    def leave_CaseExpression(self, arg):
+        pass
+
+    def visit_CaseStatement(self, arg):
+        print('visiting case statement :')
+        self._new_scope()
+        return True
+
+    def leave_CaseStatement(self, arg):
+        self._pop_scope()
+
+    def visit_NewStatement(self, arg):
+        return True
+
+    def leave_NewStatement(self, arg):
+        pass
+
+    def visit_IsVoidExpression(self, arg):
+        return True
+
+    def leave_IsVoidExpression(self, arg):
+        pass
+
+    def visit_ComplementExpression(self, arg):
+        return True
+
+    def leave_ComplementExpression(self, arg):
+        pass
+
+    def visit_InBracketsExpression(self, arg):
+        return True
+
+    def leave_InBracketsExpression(self, arg):
+        pass
+
+    def visit_BinaryOperationExpression(self, arg):
+        return True
+
+    def leave_BinaryOperationExpression(self, arg):
+        pass
+
+    def visit_ObjectIdExpression(self, arg):
+        return True
+
+    def leave_ObjectIdExpression(self, arg):
+        pass
+
+    def visit_NumberExpression(self, arg):
+        return True
+
+    def leave_NumberExpression(self, arg):
+        pass
+
+    def visit_BooleanExpression(self, arg):
+        return True
+
+    def leave_BooleanExpression(self, arg):
+        pass
+
+    def visit_StringExpression(self, arg):
+        return True
+
+    def leave_StringExpression(self, arg):
+        pass
+
     def check(self):
 
         for _cls in self._ast:
