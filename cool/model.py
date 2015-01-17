@@ -43,6 +43,18 @@ class SourceElement(object):
                         field.accept(visitor)
         getattr(visitor, 'leave_' + class_name)(self)
 
+    def type_check(self, visitor):
+        """
+        default implementation that visit the subnodes in the order
+        they are stored in self_field
+        """
+        class_name = self.__class__.__name__
+        visit = getattr(visitor, 'visit_' + class_name)
+        typeid = None
+        if visit(self):
+            typeid = getattr(visitor, 'typeof_' + class_name)(self)
+        getattr(visitor, 'leave_' + class_name)(self)
+        return typeid
 
 class ClassDefinition(SourceElement):
 
@@ -72,6 +84,10 @@ class MethodDefinition(SourceElement):
         self.return_type = return_type
         self.body = body
 
+    def get_signature(self):
+        return ([f.typeid for f in self.formal_args],
+                self.return_type)
+        
 class VariableDefinition(SourceElement):
 
     def __init__(self, var_decl, var_init):
@@ -83,12 +99,12 @@ class VariableDefinition(SourceElement):
 
 class VariableDeclaration(SourceElement):
 
-    def __init__(self, name, class_name):
+    def __init__(self, name, typeid):
         super(VariableDeclaration, self).__init__()
         self._fields = []
 
         self.name = name
-        self.class_name = class_name
+        self.typeid = typeid
         
 class Expression(SourceElement):
     
@@ -173,11 +189,11 @@ class CaseStatement(Expression):
 
 class NewStatement(Expression):
     
-    def __init__(self, class_name):
+    def __init__(self, typeid):
         super(NewStatement, self).__init__()
         self._fields = []
         
-        self.class_name = class_name
+        self.typeid = typeid
         
 class IsVoidExpression(Expression):
     
@@ -246,9 +262,5 @@ class StringExpression(Expression):
         self._fields = []
         
         self.value = value
-        
-    
-            
-            
 
 

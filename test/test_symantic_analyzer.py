@@ -9,9 +9,12 @@ def test_symbol_table_manager(fileset):
 
     print('No of classes : ', len(classes))
     
-    sa = symantic_analyzer.SymanticAnalyzer(classes)
-    sa.print_sym_table()
-    sa.check()
+    #sa = symantic_analyzer.SymanticAnalyzer(classes)
+    sa = symantic_analyzer.TypeChecker(classes)
+    #sa.print_sym_table()
+    #print(sa._sym_table._dict)
+    sa.type_check()
+    #sa.check()
     
 if __name__ == '__main__':
     import sys

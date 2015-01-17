@@ -6,6 +6,7 @@ import ply.yacc as yacc
 from . parser import CoolLexer
 from . parser import CoolParser
 import logging
+import pkgutil
 
 class Compiler():
     loaded = False
@@ -66,8 +67,10 @@ class Compiler():
         return self.parse_str(input_str)
     
     def parse_fileset(self, fileset):
-        ast_list = []
 
+        basic_cl = pkgutil.get_data(__name__, 'basic.cl')
+        ast_list = self.parse_str(str(basic_cl, encoding='utf-8'))
+        
         for filename in fileset:
             if osp.isfile(filename) and osp.splitext(filename)[1] == '.cl':
                 ast = self.parse_file(filename)
