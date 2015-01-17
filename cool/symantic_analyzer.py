@@ -1,6 +1,9 @@
 from .model import ClassDefinition
 
-class MultipleDefinitionException(Exception):
+class TypeCheckingException(Exception):
+    pass
+
+class MultipleDefinitionException(TypeCheckingException):
     
     def __init__(self, typeid):
         self._typeid = typeid
@@ -8,10 +11,10 @@ class MultipleDefinitionException(Exception):
     def __str__(self):
         return 'Multiple definitions for class : ' + self._typeid
     
-class MultipleDeclarationException(Exception):
+class MultipleDeclarationException(TypeCheckingException):
     pass
 
-class UnknownTypeException(Exception):
+class UnknownTypeException(TypeCheckingException):
     pass
 
     
@@ -145,7 +148,7 @@ class SymanticAnalyzer:
             return 'SELF_TYPE'
         else:
             for scope in reversed(self._scope_stack):
-                if objectid in scope:
+                if objectid in scope.keys():
                     return scope[objectid]
 
     def print_sym_table(self):
@@ -315,6 +318,9 @@ class TypeChecker(SymanticAnalyzer):
     def common_ansestor(self, _list):
         return self._sym_table.common_ansestor(_list)
 
+    def is_parent(self, parent_typeid, child_typeid):
+        self._sym_table.is_parent(parent_typeid, child_typeid)
+        
     def _get_method_sign_helper(self, _cls, mthd):
 
         if _cls is not None:
@@ -331,6 +337,11 @@ class TypeChecker(SymanticAnalyzer):
         for _cls in self._ast:
             if _cls.name == typeid:
                 return self._get_method_sign_helper(_cls, mthd)
+
+    def type_check_class(self, class_name):
+        for _cls in self._ast:
+            if _cls.name == class_name:
+                _cls.type_check(self)
         
     def type_check(self):
         ''' The main typechecker class'''
@@ -349,17 +360,19 @@ class TypeChecker(SymanticAnalyzer):
 
     def typeof_MethodDefinition(self, arg):
         
-        if self.type_check(arg.body) == arg.return_type:
+        if arg.body.type_check(self) == arg.return_type:
             return arg.return_type
         else:
             raise TypeCheckingException(arg)
 
     def typeof_VariableDefinition(self, arg):
-        type_var = type_check(arg.var_decl)
-        type_expr = type_check(arg.var_init)
+        type_var = arg.var_decl.type_check(self)
+        type_expr = arg.var_init.type_check(self)
         
-        if type_var == type_expr:
+        if self.is_parent(type_var, type_expr):
             return type_var
+        else:
+            raise TypeCheckingException(arg)
             
     def typeof_VariableDeclaration(self, arg):
         #CODE SMELLS
@@ -370,7 +383,7 @@ class TypeChecker(SymanticAnalyzer):
 
     def typeof_Assignment(self, arg):
         type_lhs = self._get_type(arg.lhs)
-        type_expr = self.type_check(arg.expr)
+        type_expr = arg.expr.type_check(self)
 
         if type_lhs == type_expr:
             return type_lhs
@@ -385,15 +398,14 @@ class TypeChecker(SymanticAnalyzer):
         type_expr_list = []
 
         for method_arg in arg.arguments:
-            type_expr_list.append(self.type_check(method_arg))
+            type_expr_list.append(method_arg.type_check(self))
 
         #typecheck lefthand side expression
         if arg.expr is not None:
-            type_lhs_expr = self.type_check(arg.expr)
+            type_lhs_expr = arg.expr.type_check(self)
 
             if arg.at_type is not None:
-                if self._sym_table.is_parent(arg.at_type, \
-                                             type_lhs_expr):
+                if self.is_parent(arg.at_type, type_lhs_expr):
                     type_lhs_expr = arg.at_type
                 else:
                     raise TypeCheckingException(arg)
@@ -404,16 +416,16 @@ class TypeChecker(SymanticAnalyzer):
         mthd_sign = self.get_method_sign(type_lhs_expr, arg.name)
 
         if mthd_sign is None:
-            raise TypeCheckerException('could not find method' + arg)
+            raise TypeCheckingException('could not find method' + arg)
 
         if len(mthd_sign[0]) != len(type_expr_list):
-            raise TypeCheckerException('Method number of arguments do not match' + arg)
+            raise TypeCheckingException('Method number of arguments do not match' + arg)
         for i in range(0, len(type_expr_list)):
             type_actl_arg = type_expr_list[i]
             type_frml_arg = mthd_sign[0][i]
 
             if not self.isparent(type_frml_arg, type_actl_arg):
-                raise TypeCheckerException('Method formal argument type do not match actual argument type'.format(type_actl_arg, type_frml_arg))
+                raise TypeCheckingException('Method formal argument type do not match actual argument type'.format(type_actl_arg, type_frml_arg))
             
         #method signature get return type
         if mthd_sign[1] == 'SELF_TYPE':
@@ -422,39 +434,39 @@ class TypeChecker(SymanticAnalyzer):
             return mthd_sign[1]
 
     def typeof_IfThenElse(self, arg):
-        if self.type_check(arg.condition) != 'Bool':
+        if arg.condition.type_check(self) != 'Bool':
             raise TypeCheckingException
 
-        type_if = self.type_check(arg.ifbody)
-        type_else = self.type_check(arg.elsebody)
+        type_if = arg.ifbody.type_check(self)
+        type_else = arg.elsebody.type_check(self)
         return self.common_ansestor([type_if, type_else])
 
     def typeof_WhileLoop(self, arg):
-        if self.type_check(arg.condition) != 'Bool':
+        if arg.condition.type_check(self) != 'Bool':
             raise TypeCheckingException
-        self.type_check(arg.loopbody)
+        arg.loopbody.type_check(self)
         return 'Object'
 
     def typeof_BlockStatement(self, arg):
         for stat in arg.statements[:-1]:
-            self.type_check(stat)
-        return self.type_check(stat)
+            stat.type_check(self)
+        return stat.type_check(self)
 
     def typeof_LetExpression(self, arg):
-        return self.type_check(expr)
+        return expr.type_check(self)
 
     def typeof_CaseExpression(self, arg):
         #TODO: should arg.expr match that of case statements
-        self.type_check(arg.expr)
+        arg.expr.type_check(self)
         type_expr_list = []
 
         for stat in arg.statements:
-            type_expr_list.append(self.type_check(stat))
+            type_expr_list.append(stat.type_check(self))
 
         return self.common_ansestor(type_expr_list)
 
     def typeof_CaseStatement(self, arg):
-        return self.type_check(arg.expr)
+        return arg.expr.type_check(self)
 
     def typeof_NewStatement(self, arg):
         #TODO: this is incorrect if arg.typeid is SELF_TYPE
@@ -464,11 +476,11 @@ class TypeChecker(SymanticAnalyzer):
             return arg.typeid
 
     def typeof_IsVoidExpression(self, arg):
-        self.type_check(arg)
+        arg.type_check(self)
         return 'Bool'
 
     def typeof_ComplementExpression(self, arg):
-        typeof_expr = self.type_check(arg.expr)
+        typeof_expr = arg.expr.type_check(self)
 
         if arg.isbool:
             if typeof_expr == 'Bool':
@@ -482,12 +494,12 @@ class TypeChecker(SymanticAnalyzer):
                 raise TypeCheckingException(arg)
 
     def typeof_InBracketsExpression(self, arg):
-        return self.type_check(arg.expr)
+        return arg.expr.type_check(self)
 
     def typeof_BinaryOperationExpression(self, arg):
 
-        typeof_expr1 = self.type_check(arg.expr1)
-        typeof_expr2 = self.type_check(arg.expr2)
+        typeof_expr1 = arg.expr1.type_check(self)
+        typeof_expr2 = arg.expr2.type_check(self)
 
         if arg.binop in ['+', '-', '*', '/']:
             if typeof_expr1 == 'Int' and \
@@ -513,7 +525,7 @@ class TypeChecker(SymanticAnalyzer):
                 raise NotImplementedError()
                 
     def typeof_ObjectIdExpression(self, arg):
-        return self._get_type(arg)
+        return self._get_type(arg.name)
 
     def typeof_NumberExpression(self, arg):
         return 'Int'

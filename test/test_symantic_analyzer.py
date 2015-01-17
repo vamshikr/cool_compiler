@@ -13,7 +13,7 @@ def test_symbol_table_manager(fileset):
     sa = symantic_analyzer.TypeChecker(classes)
     #sa.print_sym_table()
     #print(sa._sym_table._dict)
-    sa.type_check()
+    sa.type_check_class('Book')
     #sa.check()
     
 if __name__ == '__main__':
