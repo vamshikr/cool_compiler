@@ -144,8 +144,8 @@ class SymanticAnalyzer:
     def _get_type(self, objectid):
         #CODE SMELLS: not sure if this is correct
         if objectid == 'self':
-            #return self._curr_class
-            return 'SELF_TYPE'
+            return self._curr_class
+            #return 'SELF_TYPE'
         else:
             for scope in reversed(self._scope_stack):
                 if objectid in scope.keys():
@@ -379,7 +379,8 @@ class TypeChecker(SymanticAnalyzer):
         else:
             type_expr = arg.var_init.type_check(self)
         
-            if self.is_parent(type_var, type_expr):
+            if type_var == type_expr or \
+               self.is_parent(type_var, type_expr):
                 return type_var
             else:
                 raise TypeCheckingException(arg)
@@ -467,7 +468,11 @@ class TypeChecker(SymanticAnalyzer):
         return arg.statements[-1].type_check(self)
 
     def typeof_LetExpression(self, arg):
-        return arg.type_check(self)
+
+        for _var in arg.var_list:
+            _var.type_check(self)
+            
+        return arg.expr.type_check(self)
 
     def typeof_CaseExpression(self, arg):
         #TODO: should arg.expr match that of case statements
