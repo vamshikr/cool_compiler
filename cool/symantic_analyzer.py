@@ -17,7 +17,7 @@ class MultipleDeclarationException(TypeCheckingException):
 class UnknownTypeException(TypeCheckingException):
     pass
 
-    
+
 class SymbolTable:
 
     def __init__(self):
@@ -33,7 +33,7 @@ class SymbolTable:
     def isdefined(self, typeid):
         return True if typeid in self._dict else False
 
-    def _print_dict(self):
+    def print(self):
         i = 1
         for key in sorted(self._dict.keys()):
             print(i, key, self._dict[key])
@@ -49,10 +49,10 @@ class SymbolTable:
         else:
             _typeid = child_typeid
             while _typeid is not None:
-                if self._dict[_typeid] == parent_typeid:
+                if self.get_parent(_typeid) == parent_typeid:
                     return True
                 else:
-                    _typeid = self._dict[_typeid]
+                    _typeid = self.get_parent(_typeid)
             return False
                 
     def common_ancestor(self, _list):
@@ -77,7 +77,7 @@ class SymbolTable:
 
     def _stackup(self, typeid):
 
-        def _stackup_helper(_dict, _typeid):
+        def _stackup_helper_old(_dict, _typeid):
             '''
             Could go into infinite loop if
             their is a circular dependency
@@ -89,11 +89,21 @@ class SymbolTable:
                     yield _typeid
                     _typeid = _dict[_typeid]
 
+        def _stackup_helper(_dict, _typeid):
+            '''
+            Could go into infinite loop if
+            their is a circular dependency
+            '''
+            while _typeid is not None:
+                yield _typeid
+                _typeid = _dict[_typeid]
+
         return [t for t in _stackup_helper(self._dict, typeid)]
 
 
 class SymanticAnalyzer:
-        
+    '''Generic Class, only creates scope with variable names'''
+
     def __init__(self, ast):
 
         self._ast = ast
@@ -105,20 +115,17 @@ class SymanticAnalyzer:
 
         self._sym_table = SymbolTable()
         
-        #TODO: parse basic.cl instead of statically loading symbol table
-        #self._sym_table.add_type('Object', None)
-        #self._sym_table.add_type('Int', 'Object')
-        #self._sym_table.add_type('String', 'Object')
-        #self._sym_table.add_type('Bool', 'Object')
-        #self._sym_table.add_type('IO', 'Object')
-        
-        for _cls in self._ast:
-            if isinstance(_cls, ClassDefinition):
-                base_class = 'Object' if _cls.base_class is None \
-                             else _cls.base_class
+        for _class in self._ast:
+            if isinstance(_class, ClassDefinition):
+                
+                parent_typeid = 'Object' if _class.parent_typeid is None \
+                             else _class.parent_typeid
 
+                if _class.name == 'Object':
+                    parent_typeid = None
+                    
                 try:
-                    self._sym_table.add_type(_cls.name, base_class)
+                    self._sym_table.add_type(_class.name, parent_typeid)
                 except MultipleDefinitionException as err:
                     print(err)
 
@@ -152,12 +159,7 @@ class SymanticAnalyzer:
                     return scope[objectid]
 
     def print_sym_table(self):
-        self._sym_table._print_dict()
-
-    def check(self):
-        for _cls in self._ast:
-            self._curr_class = _cls.name
-            _cls.accept(self)
+        self._sym_table.print()
 
     #visitors
     def visit_ClassDefinition(self, class_def):
@@ -334,7 +336,7 @@ class TypeChecker(SymanticAnalyzer):
                     parent_typeid = self._sym_table.get_parent(typeid)
                     return self.get_method_sign(parent_typeid, mthd)
 
-    def _type_check_helper(self, _class):
+    def _type_check_class(self, _class):
         self._curr_class = _class.name
         _class.type_check(self)
         
@@ -344,11 +346,12 @@ class TypeChecker(SymanticAnalyzer):
         if class_name is not None:
             for _class in self._ast:
                 if _class.name == class_name:
-                    self._type_check_helper(_class)
+                    self._type_check_class(_class)
         else:
             for _class in self._ast:
-                self._type_check_helper(_class)
+                self._type_check_class(_class)
 
+    #Type checking methods for cool language constructs
     def typeof_ClassDefinition(self, arg):
 
         for variable in arg.variables:
@@ -372,6 +375,7 @@ class TypeChecker(SymanticAnalyzer):
             raise TypeCheckingException(arg)
 
     def typeof_VariableDefinition(self, arg):
+
         type_var = arg.var_decl.type_check(self)
         
         if arg.var_init is None:
@@ -393,6 +397,7 @@ class TypeChecker(SymanticAnalyzer):
             return arg.typeid
 
     def typeof_Assignment(self, arg):
+
         type_lhs = self._get_type(arg.lhs)
         type_expr = arg.expr.type_check(self)
 

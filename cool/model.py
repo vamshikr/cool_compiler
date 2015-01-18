@@ -58,12 +58,12 @@ class SourceElement(object):
 
 class ClassDefinition(SourceElement):
 
-    def __init__(self, name, base_class, features):
+    def __init__(self, name, parent_typeid, features):
         super(ClassDefinition, self).__init__()
         self._fields = ['variables', 'methods']
 
         self.name = name
-        self.base_class = base_class  #this is a typeid
+        self.parent_typeid = parent_typeid  #this is a typeid
         self.variables = []
         self.methods = []
         
