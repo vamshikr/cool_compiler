@@ -184,7 +184,8 @@ class SymanticAnalyzer:
             raise ClassNotFoundException(var_decl.typeid)
         else:
             self._add_object(var_decl.name, var_decl.typeid)
-        
+        return True
+            
     def leave_VariableDeclaration(self, var_decl):
         print('leaving variable decl : ', var_decl)
 
@@ -315,38 +316,38 @@ class TypeChecker(SymanticAnalyzer):
     def __init__(self, ast):
         super(TypeChecker, self).__init__(ast)
 
-    def common_ansestor(self, _list):
-        return self._sym_table.common_ansestor(_list)
+    def common_ancestor(self, _list):
+        return self._sym_table.common_ancestor(_list)
 
     def is_parent(self, parent_typeid, child_typeid):
-        self._sym_table.is_parent(parent_typeid, child_typeid)
-        
-    def _get_method_sign_helper(self, _cls, mthd):
-
-        if _cls is not None:
-            if any(m.name == mthd for m in _cls.methods):
-                for m in _cls.methods:
-                    if m.name == mthd:
-                        return m.get_signature()
-            else:
-                parent_typeid = self._sym_table.get_parent(_cls)
-                return self._get_method_sign_helper(parent_typeid, mthd)
+        return self._sym_table.is_parent(parent_typeid, child_typeid)
         
     def get_method_sign(self, typeid, mthd):
         
-        for _cls in self._ast:
-            if _cls.name == typeid:
-                return self._get_method_sign_helper(_cls, mthd)
+        for _class in self._ast:
+            if _class.name == typeid:
+                if any(m.name == mthd for m in _class.methods):
+                    for m in _class.methods:
+                        if m.name == mthd:
+                            return m.get_signature()
+                else:
+                    parent_typeid = self._sym_table.get_parent(typeid)
+                    return self.get_method_sign(parent_typeid, mthd)
 
-    def type_check_class(self, class_name):
-        for _cls in self._ast:
-            if _cls.name == class_name:
-                _cls.type_check(self)
+    def _type_check_helper(self, _class):
+        self._curr_class = _class.name
+        _class.type_check(self)
         
-    def type_check(self):
+    def type_check(self, class_name=None):
         ''' The main typechecker class'''
-        for _cls in self._ast:
-            _cls.type_check(self)
+
+        if class_name is not None:
+            for _class in self._ast:
+                if _class.name == class_name:
+                    self._type_check_helper(_class)
+        else:
+            for _class in self._ast:
+                self._type_check_helper(_class)
 
     def typeof_ClassDefinition(self, arg):
 
@@ -359,20 +360,27 @@ class TypeChecker(SymanticAnalyzer):
         return arg.name
 
     def typeof_MethodDefinition(self, arg):
+
+        for formal_arg in arg.formal_args:
+            formal_arg.type_check(self)
         
-        if arg.body.type_check(self) == arg.return_type:
+        if arg.body.type_check(self) in [arg.return_type, 'SELF_TYPE']:
             return arg.return_type
         else:
             raise TypeCheckingException(arg)
 
     def typeof_VariableDefinition(self, arg):
         type_var = arg.var_decl.type_check(self)
-        type_expr = arg.var_init.type_check(self)
         
-        if self.is_parent(type_var, type_expr):
+        if arg.var_init is None:
             return type_var
         else:
-            raise TypeCheckingException(arg)
+            type_expr = arg.var_init.type_check(self)
+        
+            if self.is_parent(type_var, type_expr):
+                return type_var
+            else:
+                raise TypeCheckingException(arg)
             
     def typeof_VariableDeclaration(self, arg):
         #CODE SMELLS
@@ -405,6 +413,9 @@ class TypeChecker(SymanticAnalyzer):
             type_lhs_expr = arg.expr.type_check(self)
 
             if arg.at_type is not None:
+                if type_lhs_expr == 'SELF_TYPE':
+                    type_lhs_expr = self._curr_class
+
                 if self.is_parent(arg.at_type, type_lhs_expr):
                     type_lhs_expr = arg.at_type
                 else:
@@ -424,7 +435,8 @@ class TypeChecker(SymanticAnalyzer):
             type_actl_arg = type_expr_list[i]
             type_frml_arg = mthd_sign[0][i]
 
-            if not self.isparent(type_frml_arg, type_actl_arg):
+            if type_actl_arg != type_frml_arg and \
+               not self.is_parent(type_frml_arg, type_actl_arg):
                 raise TypeCheckingException('Method formal argument type do not match actual argument type'.format(type_actl_arg, type_frml_arg))
             
         #method signature get return type
@@ -439,7 +451,7 @@ class TypeChecker(SymanticAnalyzer):
 
         type_if = arg.ifbody.type_check(self)
         type_else = arg.elsebody.type_check(self)
-        return self.common_ansestor([type_if, type_else])
+        return self.common_ancestor([type_if, type_else])
 
     def typeof_WhileLoop(self, arg):
         if arg.condition.type_check(self) != 'Bool':
@@ -450,10 +462,10 @@ class TypeChecker(SymanticAnalyzer):
     def typeof_BlockStatement(self, arg):
         for stat in arg.statements[:-1]:
             stat.type_check(self)
-        return stat.type_check(self)
+        return arg.statements[-1].type_check(self)
 
     def typeof_LetExpression(self, arg):
-        return expr.type_check(self)
+        return arg.type_check(self)
 
     def typeof_CaseExpression(self, arg):
         #TODO: should arg.expr match that of case statements
@@ -463,7 +475,7 @@ class TypeChecker(SymanticAnalyzer):
         for stat in arg.statements:
             type_expr_list.append(stat.type_check(self))
 
-        return self.common_ansestor(type_expr_list)
+        return self.common_ancestor(type_expr_list)
 
     def typeof_CaseStatement(self, arg):
         return arg.expr.type_check(self)
@@ -521,7 +533,7 @@ class TypeChecker(SymanticAnalyzer):
                 return 'Bool'
             else:
                 #TODO: this does not look right
-                #return self.common_ansestor([typeof_expr1, typeof_expr2])
+                #return self.common_ancestor([typeof_expr1, typeof_expr2])
                 raise NotImplementedError()
                 
     def typeof_ObjectIdExpression(self, arg):

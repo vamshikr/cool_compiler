@@ -272,7 +272,7 @@ class CoolParser(object):
 
     def p_method_invoke_with_typecast(self, p):
         '''methodinvoke : expr '@' TYPEID DOT OBJECTID '(' actualargs ')' '''
-        p[0] = MethodInvoke(p[1], p[2], p[4], p[6])
+        p[0] = MethodInvoke(p[1], p[3], p[5], p[7])
 
     def p_local_method_invoke(self, p):
         '''localmethodinvoke : OBJECTID '(' actualargs ')' '''
