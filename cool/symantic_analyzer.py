@@ -363,8 +363,10 @@ class TypeChecker(SymanticAnalyzer):
 
         for formal_arg in arg.formal_args:
             formal_arg.type_check(self)
-        
-        if arg.body.type_check(self) in [arg.return_type, 'SELF_TYPE']:
+
+        type_body = arg.body.type_check(self)
+        if type_body in [arg.return_type, 'SELF_TYPE'] or \
+           self.is_parent(arg.return_type, type_body):
             return arg.return_type
         else:
             raise TypeCheckingException(arg)
