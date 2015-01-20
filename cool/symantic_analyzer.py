@@ -1,4 +1,5 @@
 from .model import ClassDefinition
+from .model import ObjectIdExpression
 
 class TypeCheckingException(Exception):
     pass
@@ -69,7 +70,8 @@ class SymbolTable:
 
     def _common_ancestor_helper(self, l1, l2):
 
-        max_len = len(min(l1, l2))
+        #max_len = len(min(l1, l2))
+        max_len = min(len(l1), len(l2))
         for i in range(1, max_len+1):
             if l1[-i] != l2[-i]:
                 return l1[-i+1]
@@ -256,6 +258,7 @@ class SymanticAnalyzer:
         return True
 
     def leave_CaseStatement(self, arg):
+        print('leaving case statement :')
         self._pop_scope()
 
     def visit_NewStatement(self, arg):
@@ -418,6 +421,7 @@ class TypeChecker(SymanticAnalyzer):
         checks if the method signature matches
         the method definition
         '''
+
         type_expr_list = []
 
         for method_arg in arg.arguments:
@@ -426,12 +430,13 @@ class TypeChecker(SymanticAnalyzer):
         #typecheck lefthand side expression
         if arg.expr is not None:
             type_lhs_expr = arg.expr.type_check(self)
-
+            
             if arg.at_type is not None:
                 if type_lhs_expr == 'SELF_TYPE':
                     type_lhs_expr = self._curr_class
 
-                if self.is_parent(arg.at_type, type_lhs_expr):
+                if arg.at_type == type_lhs_expr or \
+                   self.is_parent(arg.at_type, type_lhs_expr):
                     type_lhs_expr = arg.at_type
                 else:
                     raise TypeCheckingException(arg)
@@ -497,6 +502,7 @@ class TypeChecker(SymanticAnalyzer):
         return self.common_ancestor(type_expr_list)
 
     def typeof_CaseStatement(self, arg):
+        arg.var_decl.type_check(self)
         return arg.expr.type_check(self)
 
     def typeof_NewStatement(self, arg):
@@ -507,7 +513,7 @@ class TypeChecker(SymanticAnalyzer):
             return arg.typeid
 
     def typeof_IsVoidExpression(self, arg):
-        arg.type_check(self)
+        arg.expr.type_check(self)
         return 'Bool'
 
     def typeof_ComplementExpression(self, arg):
@@ -529,31 +535,34 @@ class TypeChecker(SymanticAnalyzer):
 
     def typeof_BinaryOperationExpression(self, arg):
 
-        typeof_expr1 = arg.expr1.type_check(self)
-        typeof_expr2 = arg.expr2.type_check(self)
+        type_expr1 = arg.expr1.type_check(self)
+        type_expr2 = arg.expr2.type_check(self)
 
         if arg.binop in ['+', '-', '*', '/']:
-            if typeof_expr1 == 'Int' and \
-               typeof_expr2 == 'Int':
+            if type_expr1 == 'Int' and \
+               type_expr2 == 'Int':
                 return 'Int'
             else:
                 raise TypeCheckingException(arg)
         elif arg.binop in ['<', '<=']:
-            if typeof_expr1 == 'Int' and \
-               typeof_expr2 == 'Int':
+            if type_expr1 == 'Int' and \
+               type_expr2 == 'Int':
                 return 'Bool'
             else:
                 raise BinopTypeCheckingException(arg)
         else: #elif arg.binop == '=':
             valid_types = ['Int', 'Bool', 'String']
-            if typeof_expr1 in valid_types and \
-               typeof_expr2 in valid_types and \
-               typeof_expr1 == typeof_expr2:
+            if type_expr1 in valid_types and \
+               type_expr2 in valid_types and \
+               type_expr1 == type_expr2:
+                return 'Bool'
+            elif type_expr1 == type_expr2:
                 return 'Bool'
             else:
                 #TODO: this does not look right
                 #return self.common_ancestor([typeof_expr1, typeof_expr2])
-                raise NotImplementedError()
+                #raise NotImplementedError()
+                raise TypeCheckingException(arg)
                 
     def typeof_ObjectIdExpression(self, arg):
         return self._get_type(arg.name)
