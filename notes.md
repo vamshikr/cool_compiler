@@ -1,3 +1,14 @@
+###Sun Jan 18 08:43:24 CST 2015
+* Write synthetic test cases to test typechecking for each cool langague feature/construct
+
+* SELF_TYPE type and 'self' object are still confusing, and probably implemented incorrectly
+
+* There is an error in typechecking Assignment operation
+
+* Error reporting is ameture...actually not existing
+
+* Errors reported should have [filepath:line-number:column]
+
 ###Sun Jan 11 22:07:34 CST 2015
 
 1) Define [Object, Int, Bool, String, IO] classes. Look at cool_manual.pdf

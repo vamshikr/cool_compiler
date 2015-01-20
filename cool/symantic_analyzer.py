@@ -368,8 +368,14 @@ class TypeChecker(SymanticAnalyzer):
             formal_arg.type_check(self)
 
         type_body = arg.body.type_check(self)
-        if type_body in [arg.return_type, 'SELF_TYPE'] or \
-           self.is_parent(arg.return_type, type_body):
+
+        if arg.return_type == 'SELF_TYPE':
+            type_return_val = self._curr_class
+        else:
+            type_return_val = arg.return_type
+
+        if type_body == type_return_val or \
+           self.is_parent(type_return_val, type_body):
             return arg.return_type
         else:
             raise TypeCheckingException(arg)
@@ -400,11 +406,12 @@ class TypeChecker(SymanticAnalyzer):
 
         type_lhs = self._get_type(arg.lhs)
         type_expr = arg.expr.type_check(self)
-
-        if type_lhs == type_expr:
-            return type_lhs
+        
+        if type_lhs == type_expr or \
+           self.is_parent(type_lhs, type_expr):
+            return type_expr
         else:
-            TypeCheckingException(arg)
+            raise TypeCheckingException(arg)
 
     def typeof_MethodInvoke(self, arg):
         '''
